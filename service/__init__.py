@@ -9,6 +9,7 @@ from flask import Flask
 from service import config
 from service.common import log_handlers
 from flask_talisman import Talisman  # Import Talisman for security
+from flask_cors import CORS  # Import CORS for cross-origin requests
 
 # Create Flask application
 app = Flask(__name__)
@@ -16,6 +17,9 @@ app.config.from_object(config)
 
 # Set up Talisman for security
 talisman = Talisman(app)
+
+# Set up CORS for cross-origin requests
+CORS(app)
 
 # Import the routes After the Flask app is created
 # pylint: disable=wrong-import-position, cyclic-import, wrong-import-order
