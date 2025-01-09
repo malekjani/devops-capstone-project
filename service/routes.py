@@ -281,4 +281,5 @@ class TestAccountService(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_account_not_found(self):
-        """It should return 404_NOT_FOUND when the account
+        """It should return 404_NOT_FOUND when the account"""
+
