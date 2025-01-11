@@ -11,6 +11,7 @@ from . import app  # Import Flask application
 # Ensure all routes are defined only once
 app.url_map.strict_slashes = False
 
+
 ############################################################
 # Health Endpoint
 ############################################################
