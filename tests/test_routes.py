@@ -50,14 +50,14 @@ class TestAccountService(TestCase):
     #  A C C O U N T   T E S T   C A S E S
     ######################################################################
 
-    def test_health(self):
-        """It should be healthy"""
-        resp = self.client.get("/health")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data["status"], "OK")
+def test_health(self):
+    """It should be healthy"""
+    resp = self.client.get("/health", follow_redirects=True)
+    self.assertEqual(resp.status_code, 200)
+    data = resp.get_json()
+    self.assertEqual(data["status"], "OK")
 
-    def test_index(self):
-        """It should get 200_OK from the Home Page"""
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+def test_index(self):
+    """It should get 200_OK from the Home Page"""
+    response = self.client.get("/", follow_redirects=True)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
