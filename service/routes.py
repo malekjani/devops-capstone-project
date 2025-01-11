@@ -58,6 +58,9 @@ def create_accounts():
         return make_response(
             jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
         )
+    except KeyError as e:
+        app.logger.error("KeyError while creating account: %s", str(e))
+        abort(status.HTTP_400_BAD_REQUEST, "Invalid input: missing required fields")
     except Exception as e:
         app.logger.error("Error creating account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
@@ -126,6 +129,9 @@ def update_accounts(account_id):
         account.update()
         app.logger.info("Account with id [%s] updated", account_id)
         return jsonify(account.serialize()), status.HTTP_200_OK
+    except KeyError as e:
+        app.logger.error("KeyError while updating account: %s", str(e))
+        abort(status.HTTP_400_BAD_REQUEST, "Invalid input: missing required fields")
     except Exception as e:
         app.logger.error("Error updating account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
