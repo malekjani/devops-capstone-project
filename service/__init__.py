@@ -16,7 +16,12 @@ app = Flask(__name__)
 app.config.from_object(config)
 
 # Set up Talisman for security
-talisman = Talisman(app)
+talisman = Talisman(app, content_security_policy={
+    'default-src': "'self'",
+    'img-src': "*",
+    'style-src': "'self' 'unsafe-inline'",
+    'script-src': "'self' 'unsafe-inline'",
+})
 
 # Set up CORS for cross-origin requests
 CORS(app)
