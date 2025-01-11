@@ -21,6 +21,18 @@ def health():
     app.logger.info("Health endpoint called")
     return jsonify(dict(status="OK")), status.HTTP_200_OK
 
+@app.route("/", methods=["GET"])
+def index():
+    """Root URL response"""
+    app.logger.info("Root URL called")
+    return (
+        jsonify(
+            name="Account REST API Service",
+            version="1.0",
+        ),
+        status.HTTP_200_OK,
+    )
+
 
 ######################################################################
 # GET INDEX
