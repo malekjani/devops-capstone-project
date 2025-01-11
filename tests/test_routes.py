@@ -60,3 +60,10 @@ class TestAccountService(TestCase):
         """It should get 200_OK from the Home Page"""
         response = self.client.get("/", follow_redirects=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_talisman_security_headers(self):
+        """It should return security headers set by Talisman"""
+        resp = self.client.get("/", follow_redirects=True)
+        self.assertIn("Content-Security-Policy", resp.headers)
+        self.assertIn("X-Frame-Options", resp.headers)
+        self.assertIn("X-Content-Type-Options", resp.headers)
+        self.assertIn("Strict-Transport-Security", resp.headers)
