@@ -1,5 +1,3 @@
-###################### service/routes.py ######################
-
 """
 Account Service
 
@@ -16,6 +14,7 @@ from . import app  # Import Flask application
 @app.route("/health")
 def health():
     """Health Status"""
+    app.logger.info("Health endpoint called")
     return jsonify(dict(status="OK")), status.HTTP_200_OK
 
 ######################################################################
@@ -24,6 +23,7 @@ def health():
 @app.route("/")
 def index():
     """Root URL response"""
+    app.logger.info("Root URL called")
     return (
         jsonify(
             name="Account REST API Service",
@@ -43,14 +43,19 @@ def create_accounts():
     """
     app.logger.info("Request to create an Account")
     check_content_type("application/json")
-    account = Account()
-    account.deserialize(request.get_json())
-    account.create()
-    message = account.serialize()
-    location_url = url_for("get_accounts", account_id=account.id, _external=True)
-    return make_response(
-        jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
-    )
+    try:
+        account = Account()
+        account.deserialize(request.get_json())
+        account.create()
+        message = account.serialize()
+        location_url = url_for("get_accounts", account_id=account.id, _external=True)
+        app.logger.info("Account created with id: %s", account.id)
+        return make_response(
+            jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
+        )
+    except Exception as e:
+        app.logger.error("Error creating account: %s", str(e))
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
 ######################################################################
 # LIST ALL ACCOUNTS
@@ -62,12 +67,14 @@ def list_accounts():
     This endpoint will list all Accounts
     """
     app.logger.info("Request to list Accounts")
-
-    accounts = Account.all()
-    account_list = [account.serialize() for account in accounts]
-
-    app.logger.info("Returning [%s] accounts", len(account_list))
-    return jsonify(account_list), status.HTTP_200_OK
+    try:
+        accounts = Account.all()
+        account_list = [account.serialize() for account in accounts]
+        app.logger.info("Returning [%s] accounts", len(account_list))
+        return jsonify(account_list), status.HTTP_200_OK
+    except Exception as e:
+        app.logger.error("Error listing accounts: %s", str(e))
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
 ######################################################################
 # READ AN ACCOUNT
@@ -79,11 +86,15 @@ def get_accounts(account_id):
     This endpoint will read an Account based the account_id that is requested
     """
     app.logger.info("Request to read an Account with id: %s", account_id)
-
-    account = Account.find(account_id)
-    if not account:
-        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
-    return jsonify(account.serialize()), status.HTTP_200_OK
+    try:
+        account = Account.find(account_id)
+        if not account:
+            app.logger.warning("Account with id [%s] not found", account_id)
+            abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+        return jsonify(account.serialize()), status.HTTP_200_OK
+    except Exception as e:
+        app.logger.error("Error reading account: %s", str(e))
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
 ######################################################################
 # UPDATE AN EXISTING ACCOUNT
@@ -95,18 +106,23 @@ def update_accounts(account_id):
     This endpoint will update an Account based on the posted data
     """
     app.logger.info("Request to update an Account with id: %s", account_id)
+    try:
+        account = Account.find(account_id)
+        if not account:
+            app.logger.warning("Account with id [%s] not found for update", account_id)
+            abort(
+                status.HTTP_404_NOT_FOUND,
+                f"Account with id [{account_id}] could not be found.",
+            )
 
-    account = Account.find(account_id)
-    if not account:
-        abort(
-            status.HTTP_404_NOT_FOUND,
-            f"Account with id [{account_id}] could not be found.",
-        )
+        account.deserialize(request.get_json())
+        account.update()
 
-    account.deserialize(request.get_json())
-    account.update()
-
-    return jsonify(account.serialize()), status.HTTP_200_OK
+        app.logger.info("Account with id [%s] updated", account_id)
+        return jsonify(account.serialize()), status.HTTP_200_OK
+    except Exception as e:
+        app.logger.error("Error updating account: %s", str(e))
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
 ######################################################################
 # DELETE AN ACCOUNT
@@ -118,15 +134,21 @@ def delete_accounts(account_id):
     This endpoint will delete an Account based on the account_id that is requested
     """
     app.logger.info("Request to delete an Account with id: %s", account_id)
-    account = Account.find(account_id)
-    if account:
-        account.delete()
-    return "", status.HTTP_204_NO_CONTENT
+    try:
+        account = Account.find(account_id)
+        if account:
+            account.delete()
+            app.logger.info("Account with id [%s] deleted", account_id)
+        else:
+            app.logger.warning("Account with id [%s] not found for deletion", account_id)
+        return "", status.HTTP_204_NO_CONTENT
+    except Exception as e:
+        app.logger.error("Error deleting account: %s", str(e))
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
 ######################################################################
 #  U T I L I T Y   F U N C T I O N S
 ######################################################################
-
 def check_content_type(media_type):
     """Checks that the media type is correct"""
     content_type = request.headers.get("Content-Type")
@@ -137,148 +159,3 @@ def check_content_type(media_type):
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
         f"Content-Type must be {media_type}",
     )
-
-###################### tests/test_routes.py ######################
-
-"""
-Account API Service Test Suite
-
-Test cases can be run with the following:
-  nosetests -v --with-spec --spec-color
-  coverage report -m
-"""
-import os
-import logging
-from unittest import TestCase
-from tests.factories import AccountFactory
-from service.common import status  # HTTP Status Codes
-from service.models import db, Account, init_db
-from service.routes import app
-
-DATABASE_URI = os.getenv(
-    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
-)
-
-BASE_URL = "/accounts"
-
-######################################################################
-#  T E S T   C A S E S
-######################################################################
-class TestAccountService(TestCase):
-    """Account Service Tests"""
-
-    @classmethod
-    def setUpClass(cls):
-        """Run once before all tests"""
-        app.config["TESTING"] = True
-        app.config["DEBUG"] = False
-        app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
-        app.logger.setLevel(logging.CRITICAL)
-        init_db(app)
-
-    def setUp(self):
-        """Runs before each test"""
-        db.session.query(Account).delete()  # clean up the last tests
-        db.session.commit()
-
-        self.client = app.test_client()
-
-    def tearDown(self):
-        """Runs once after each test case"""
-        db.session.remove()
-
-    ######################################################################
-    #  H E L P E R   M E T H O D
-    ######################################################################
-
-    def _create_accounts(self, count):
-        """Factory method to create accounts in bulk"""
-        accounts = []
-        for _ in range(count):
-            account = AccountFactory()
-            response = self.client.post(BASE_URL, json=account.serialize())
-            self.assertEqual(
-                response.status_code,
-                status.HTTP_201_CREATED,
-                "Could not create test Account",
-            )
-            new_account = response.get_json()
-            account.id = new_account["id"]
-            accounts.append(account)
-        return accounts
-
-    ######################################################################
-    #  A C C O U N T   T E S T   C A S E S
-    ######################################################################
-
-    def test_index(self):
-        """It should get 200_OK from the Home Page"""
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_health(self):
-        """It should be healthy"""
-        resp = self.client.get("/health")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data["status"], "OK")
-
-    def test_create_account(self):
-        """It should Create a new Account"""
-        account = AccountFactory()
-        response = self.client.post(
-            BASE_URL,
-            json=account.serialize(),
-            content_type="application/json"
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Make sure location header is set
-        location = response.headers.get("Location", None)
-        self.assertIsNotNone(location)
-
-        # Check the data is correct
-        new_account = response.get_json()
-        self.assertEqual(new_account["name"], account.name)
-        self.assertEqual(new_account["email"], account.email)
-        self.assertEqual(new_account["address"], account.address)
-        self.assertEqual(new_account["phone_number"], account.phone_number)
-
-    def test_list_accounts(self):
-        """It should List all Accounts"""
-        self._create_accounts(5)
-        resp = self.client.get(BASE_URL)
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
-        self.assertEqual(len(data), 5)
-
-    def test_get_account(self):
-        """It should Read a single Account"""
-        account = self._create_accounts(1)[0]
-        resp = self.client.get(f"{BASE_URL}/{account.id}")
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
-        self.assertEqual(data["name"], account.name)
-
-    def test_update_account(self):
-        """It should Update an existing Account"""
-        account = self._create_accounts(1)[0]
-        updated_data = {
-            "name": "Updated Name",
-            "email": "updated@example.com",
-            "address": "Updated Address",
-            "phone_number": "555-9999"
-        }
-        resp = self.client.put(f"{BASE_URL}/{account.id}", json=updated_data)
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        updated_account = resp.get_json()
-        self.assertEqual(updated_account["name"], "Updated Name")
-
-    def test_delete_account(self):
-        """It should Delete an Account"""
-        account = self._create_accounts(1)[0]
-        resp = self.client.delete(f"{BASE_URL}/{account.id}")
-        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
-
-    def test_account_not_found(self):
-        """It should return 404_NOT_FOUND when the account
