@@ -8,6 +8,7 @@ from service.models import Account
 from service.common import status  # HTTP Status Codes
 from . import app  # Import Flask application
 
+
 ############################################################
 # Health Endpoint
 ############################################################
@@ -16,6 +17,7 @@ def health():
     """Health Status"""
     app.logger.info("Health endpoint called")
     return jsonify(dict(status="OK")), status.HTTP_200_OK
+
 
 ######################################################################
 # GET INDEX
@@ -31,6 +33,7 @@ def index():
         ),
         status.HTTP_200_OK,
     )
+
 
 ######################################################################
 # CREATE A NEW ACCOUNT
@@ -57,6 +60,7 @@ def create_accounts():
         app.logger.error("Error creating account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
+
 ######################################################################
 # LIST ALL ACCOUNTS
 ######################################################################
@@ -75,6 +79,7 @@ def list_accounts():
     except Exception as e:
         app.logger.error("Error listing accounts: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+
 
 ######################################################################
 # READ AN ACCOUNT
@@ -96,6 +101,7 @@ def get_accounts(account_id):
         app.logger.error("Error reading account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
 
+
 ######################################################################
 # UPDATE AN EXISTING ACCOUNT
 ######################################################################
@@ -114,15 +120,14 @@ def update_accounts(account_id):
                 status.HTTP_404_NOT_FOUND,
                 f"Account with id [{account_id}] could not be found.",
             )
-
         account.deserialize(request.get_json())
         account.update()
-
         app.logger.info("Account with id [%s] updated", account_id)
         return jsonify(account.serialize()), status.HTTP_200_OK
     except Exception as e:
         app.logger.error("Error updating account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+
 
 ######################################################################
 # DELETE AN ACCOUNT
@@ -145,6 +150,7 @@ def delete_accounts(account_id):
     except Exception as e:
         app.logger.error("Error deleting account: %s", str(e))
         abort(status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error")
+
 
 ######################################################################
 #  U T I L I T Y   F U N C T I O N S
