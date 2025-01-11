@@ -8,11 +8,13 @@ from service.models import Account
 from service.common import status  # HTTP Status Codes
 from . import app  # Import Flask application
 
+# Ensure all routes are defined only once
+app.url_map.strict_slashes = False
 
 ############################################################
 # Health Endpoint
 ############################################################
-@app.route("/health")
+@app.route("/health", methods=["GET"])
 def health():
     """Health Status"""
     app.logger.info("Health endpoint called")
@@ -22,7 +24,7 @@ def health():
 ######################################################################
 # GET INDEX
 ######################################################################
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
     """Root URL response"""
     app.logger.info("Root URL called")
